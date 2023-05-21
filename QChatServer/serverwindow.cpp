@@ -20,7 +20,7 @@ ServerWindow::~ServerWindow()
 
 void ServerWindow::toggleStartServer()
 {
-    int port = ui->portEdit->toPlainText().toInt();
+    int port = ui->portEdit->text().toInt();
     if(port == 0)
     {
         logMessage(QStringLiteral("Port is unvalible"));
@@ -29,7 +29,7 @@ void ServerWindow::toggleStartServer()
     if(m_chatServer->isListening()){
         m_chatServer->stopServer();
         ui->startStopButton->setText(tr("Start Server"));
-        ui->portEdit->setReadOnly(false);
+        ui->portEdit->setEnabled(true);
         logMessage(QStringLiteral("Server Stopped"));
     } else {
 
@@ -38,6 +38,7 @@ void ServerWindow::toggleStartServer()
             return;
         }
         logMessage(QStringLiteral("Server Started"));
+        ui->portEdit->setEnabled(false);
         ui->startStopButton->setText(tr("Stop Server"));
     }
 }
