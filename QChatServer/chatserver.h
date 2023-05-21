@@ -5,7 +5,7 @@
 #include <QVector>
 class QThread;
 class ServerWorker;
-
+class QJsonObject;
 class ChatServer : public QTcpServer
 {
     Q_OBJECT
@@ -21,10 +21,17 @@ private:
     QVector<ServerWorker *> m_clients;
 
 private slots:
+    void broadcast(const QJsonObject &message, ServerWorker *exclude);
+    void broadcast(const QJsonObject &message, ServerWorker *sender, ServerWorker *recipient);
+    void jsonReceived(ServerWorker *sender, const QJsonObject &json);
     void userDisconnected(ServerWorker *sender, int threadIdx);
     void userError(ServerWorker *sender);
 public slots:
     void stopServer();
+private:
+    void jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj);
+    void jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj);
+    void sendJson(ServerWorker *destination, const QJsonObject &message);
 signals:
     void logMessage(const QString &msg);
     void stopAllClients();

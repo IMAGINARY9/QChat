@@ -10,6 +10,8 @@ class ChatClient : public QObject
     Q_OBJECT
 public:
     explicit ChatClient(QObject *parent = nullptr);
+    //QString userName() const;
+    //bool loggedIn() const;
 public slots:
     void connectToServer(const QHostAddress &address, qintptr port);
     void login(const QString &userName);
@@ -25,6 +27,7 @@ signals:
     void userLeft(const QString &username);
 private:
     QTcpSocket *m_clientSocket;
+    //QString m_userName;
     bool m_loggedIn;
 };
 

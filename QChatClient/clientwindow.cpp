@@ -39,7 +39,7 @@ ClientWindow::~ClientWindow()
 
 void ClientWindow::changeConnection()
 {
-    if(!ui->connectionBox->isChecked())
+    if(!ui->connectionBox->isChecked()) //m_loggedIn
     {
         m_chatClient->disconnectFromHost();
         return;
@@ -87,6 +87,7 @@ void ClientWindow::connectedToServer()
 void ClientWindow::attemptLogin(const QString &userName)
 {
     m_chatClient->login(userName);
+    ui->nameLabel->setText(userName);
 }
 
 void ClientWindow::loggedIn()

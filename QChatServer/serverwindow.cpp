@@ -32,7 +32,6 @@ void ServerWindow::toggleStartServer()
         ui->portEdit->setEnabled(true);
         logMessage(QStringLiteral("Server Stopped"));
     } else {
-
         if(!m_chatServer->listen(QHostAddress::Any, port)){
             QMessageBox::critical(this, tr("Error"), tr("Unable to start the server"));
             return;
