@@ -11,20 +11,24 @@ ClientWindow::ClientWindow(QWidget *parent)
     , ui(new Ui::ClientWindow)
     , m_chatClient(new ChatClient(this))
     , m_chatModel(new QStandardItemModel(this))
+    , m_usersModel(new QStringListModel(this))
 {
     ui->setupUi(this);
 
     m_chatModel->insertColumn(0);
 
     ui->chatView->setModel(m_chatModel);
+    ui->usersView->setModel(m_usersModel);
 
     connect(m_chatClient, &ChatClient::connected, this, &ClientWindow::connectedToServer);
     connect(m_chatClient, &ChatClient::loggedIn, this, &ClientWindow::loggedIn);
     connect(m_chatClient, &ChatClient::loginError, this, &ClientWindow::loginFailed);
     connect(m_chatClient, &ChatClient::disconnected, this, &ClientWindow::disconnectedFromServer);
     connect(m_chatClient, &ChatClient::error, this, &ClientWindow::error);
-    connect(m_chatClient, &ChatClient::userJoined, this, &ClientWindow::userJoined);
-    connect(m_chatClient, &ChatClient::userLeft, this, &ClientWindow::userLeft);
+
+    connect(m_chatClient, &ChatClient::updateUsersList, this, &ClientWindow::updateUsersModel);
+    //connect(m_chatClient, &ChatClient::userJoined, this, &ClientWindow::userJoined);
+    //connect(m_chatClient, &ChatClient::userLeft, this, &ClientWindow::userLeft);
 
     connect(ui->connectionBox, &QCheckBox::toggled, this, &ClientWindow::changeConnection);
 
@@ -69,6 +73,7 @@ void ClientWindow::changeConnection()
         ui->connectionBox->setCheckState(Qt::Unchecked);
         return;
     }
+    ui->connectionBox->setEnabled(false);
 
     m_chatClient->connectToServer(QHostAddress(hostAddress), hostPort);
 }
@@ -92,10 +97,12 @@ void ClientWindow::attemptLogin(const QString &userName)
 
 void ClientWindow::loggedIn()
 {
+    ui->connectionBox->setCheckState(Qt::Checked);
+    ui->connectionBox->setEnabled(true);
     ui->messageEdit->setEnabled(true);
     ui->sendButton->setEnabled(true);
     ui->chatView->setEnabled(true);
-    m_lastUserName.clear();
+    //m_lastUserName.clear();
 }
 
 void ClientWindow::loginFailed(const QString &reason)
@@ -118,22 +125,28 @@ void ClientWindow::disconnectedFromServer()
 {
     QMessageBox::warning(this, tr("Disconnected"), tr("You have disconnected from the server"));
     ui->connectionBox->setCheckState(Qt::Unchecked);
+    ui->connectionBox->setEnabled(true);
     ui->messageEdit->setEnabled(false);
     ui->sendButton->setEnabled(false);
     ui->chatView->setEnabled(false);
-    m_lastUserName.clear();
+    //m_lastUserName.clear();
 
 }
 
-void ClientWindow::userJoined(const QString &username)
+void ClientWindow::updateUsersModel(const QStringList &userNames)
 {
-    m_lastUserName.clear();
+    m_usersModel->setStringList(userNames);
 }
 
-void ClientWindow::userLeft(const QString &username)
-{
-    m_lastUserName.clear();
-}
+//void ClientWindow::userJoined(const QString &username)
+//{
+//    //m_lastUserName.clear();
+//}
+
+//void ClientWindow::userLeft(const QString &username)
+//{
+//    //m_lastUserName.clear();
+//}
 
 void ClientWindow::error(QAbstractSocket::SocketError socketError)
 {
@@ -187,10 +200,6 @@ void ClientWindow::error(QAbstractSocket::SocketError socketError)
     default:
         Q_UNREACHABLE();
     }
-    ui->connectionBox->setCheckState(Qt::Unchecked);
-    ui->messageEdit->setEnabled(false);
-    ui->sendButton->setEnabled(false);
-    ui->chatView->setEnabled(false);
-    m_lastUserName.clear();
+    disconnectedFromServer();
 }
 

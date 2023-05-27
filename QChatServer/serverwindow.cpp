@@ -7,8 +7,13 @@ ServerWindow::ServerWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::ServerWindow)
     , m_chatServer(new ChatServer(this))
+    , m_clientsModel(new QStringListModel(this))
 {
     ui->setupUi(this);
+    ui->sessionsView->setModel(m_clientsModel);
+
+    connect(m_chatServer, &ChatServer::updateUsersList, this, &ServerWindow::updateClientsModel);
+
     connect(ui->startStopButton, &QPushButton::clicked, this, &ServerWindow::toggleStartServer);
     connect(m_chatServer, &ChatServer::logMessage, this, &ServerWindow::logMessage);
 }
@@ -45,5 +50,10 @@ void ServerWindow::toggleStartServer()
 void ServerWindow::logMessage(const QString &msg)
 {
     ui->logEditor->appendPlainText(msg + QLatin1Char('\n'));
+}
+
+void ServerWindow::updateClientsModel(const QStringList &clients)
+{
+    m_clientsModel->setStringList(clients);
 }
 

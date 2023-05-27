@@ -1,5 +1,6 @@
 #include "chatserver.h"
 #include "serverworker.h"
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -103,6 +104,7 @@ void ChatServer::userDisconnected(ServerWorker *sender, int threadIdx)
         disconnectedMessage[QStringLiteral("username")] = userName;
         broadcast(disconnectedMessage, nullptr);
         emit logMessage(userName + QLatin1String(" disconnected"));
+        updateUsers();
     }
     sender->deleteLater();
 }
@@ -110,13 +112,23 @@ void ChatServer::userDisconnected(ServerWorker *sender, int threadIdx)
 void ChatServer::userError(ServerWorker *sender)
 {
     Q_UNUSED(sender)
-    emit logMessage(sender->userName() + QLatin1String(" Error"));
+    emit logMessage(QLatin1String("Client ") + sender->userName() + QLatin1String(" Error"));
 }
 
 void ChatServer::stopServer()
 {
     emit stopAllClients();
     close();
+}
+
+QStringList ChatServer::updateUsers()
+{
+    QStringList userNames;
+    for (const ServerWorker *worker : m_clients) {
+        userNames.push_back(worker->userName());
+    }
+    emit updateUsersList(userNames);
+    return userNames;
 }
 
 void ChatServer::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj)
@@ -149,11 +161,14 @@ void ChatServer::jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docO
     QJsonObject successMessage;
     successMessage[QStringLiteral("type")] = QStringLiteral("login");
     successMessage[QStringLiteral("success")] = true;
+    successMessage[QStringLiteral("users")] = QJsonArray::fromStringList(updateUsers());
     sendJson(sender, successMessage);
     QJsonObject connectedMessage;
-    successMessage[QStringLiteral("type")] = QStringLiteral("newUser");
-    successMessage[QStringLiteral("username")] = newUserName;
+    connectedMessage[QStringLiteral("type")] = QStringLiteral("new user");
+    connectedMessage[QStringLiteral("username")] = newUserName;
     broadcast(connectedMessage, sender);
+
+    updateUsers();
 }
 
 void ChatServer::jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj)

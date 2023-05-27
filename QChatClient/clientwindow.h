@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QAbstractSocket>
+#include <QStringListModel>
 
 class ChatClient;
 class QStandardItemModel;
@@ -23,7 +24,8 @@ private:
     Ui::ClientWindow *ui;
     ChatClient *m_chatClient;
     QStandardItemModel *m_chatModel;
-    QString m_lastUserName;
+    QStringListModel *m_usersModel;
+    //QString m_lastUserName;
 
 private slots:
     void changeConnection();
@@ -34,8 +36,9 @@ private slots:
     void messageReceived(const QString &sender, const QString &text);
     void sendMessage();
     void disconnectedFromServer();
-    void userJoined(const QString &username);
-    void userLeft(const QString &username);
+    void updateUsersModel(const QStringList &userNames);
+    //void userJoined(const QString &username);
+    //void userLeft(const QString &username);
     void error(QAbstractSocket::SocketError socketError);
 };
 #endif // CLIENTWINDOW_H

@@ -29,10 +29,12 @@ private slots:
 public slots:
     void stopServer();
 private:
+    QStringList updateUsers();
     void jsonFromLoggedOut(ServerWorker *sender, const QJsonObject &docObj);
     void jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docObj);
     void sendJson(ServerWorker *destination, const QJsonObject &message);
 signals:
+    void updateUsersList(const QStringList &users);
     void logMessage(const QString &msg);
     void stopAllClients();
 };
