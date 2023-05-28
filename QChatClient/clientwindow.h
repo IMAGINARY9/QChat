@@ -31,6 +31,7 @@ private slots:
     void changeConnection();
     void connectedToServer();
     void attemptLogin(const QString &userName);
+    void openChat(const QModelIndex &index);
     void loggedIn();
     void loginFailed(const QString &reason);
     void messageReceived(const QString &sender, const QString &text);

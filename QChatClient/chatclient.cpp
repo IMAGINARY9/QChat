@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QStringLiteral>
 
 ChatClient::ChatClient(QObject *parent)
     : QObject{parent}
@@ -31,6 +32,12 @@ QString ChatClient::userName() const
     return m_userName;
 }
 
+QString ChatClient::recipientName() const
+{
+    return m_recipientName;
+}
+
+
 void ChatClient::connectToServer(const QHostAddress &address, qintptr port)
 {
     m_clientSocket->connectToHost(address, port);
@@ -49,6 +56,32 @@ void ChatClient::login(const QString &userName)
 
         clientStream << QJsonDocument(message).toJson(QJsonDocument::Compact);
     }
+}
+
+bool ChatClient::selectChat(const QString &chatName)
+{
+    if (chatName.isEmpty() || !m_users->contains(chatName))
+        return false;
+
+    m_recipientName = chatName;
+    return true;
+}
+
+bool ChatClient::sendMessage(const QString &text)
+{
+    if (text.isEmpty())
+        return false;
+
+    QDataStream clientStream(m_clientSocket);
+
+    QJsonObject message;
+    message[QStringLiteral("sender")] = m_userName;
+    message[QStringLiteral("recipient")] = m_recipientName;
+    message[QStringLiteral("type")] = QStringLiteral("message");
+    message[QStringLiteral("text")] = text;
+
+    clientStream << QJsonDocument(message).toJson();
+    return true;
 }
 
 void ChatClient::disconnectFromHost()
@@ -131,7 +164,6 @@ void ChatClient::jsonReceived(const QJsonObject &docObj)
             return;
         m_users->push_back(usernameVal.toString());
         emit updateUsersList(*m_users);
-        //emit userJoined(usernameVal.toString());
 
     // userLeft
     } else if (typeVal.toString().compare(QLatin1String("user disconnected"), Qt::CaseInsensitive) == 0) {
@@ -140,7 +172,6 @@ void ChatClient::jsonReceived(const QJsonObject &docObj)
             return;
         m_users->removeAll(usernameVal.toString());
         emit updateUsersList(*m_users);
-        //emit userLeft(usernameVal.toString());
 
     // message
     } else if (typeVal.toString().compare(QLatin1String("message"), Qt::CaseInsensitive) == 0) {

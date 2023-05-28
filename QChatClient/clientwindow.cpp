@@ -15,25 +15,24 @@ ClientWindow::ClientWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    m_chatModel->insertColumn(0);
-
     ui->chatView->setModel(m_chatModel);
     ui->usersView->setModel(m_usersModel);
 
     connect(m_chatClient, &ChatClient::connected, this, &ClientWindow::connectedToServer);
     connect(m_chatClient, &ChatClient::loggedIn, this, &ClientWindow::loggedIn);
     connect(m_chatClient, &ChatClient::loginError, this, &ClientWindow::loginFailed);
+    connect(m_chatClient, &ChatClient::messageReceived, this, &ClientWindow::messageReceived);
     connect(m_chatClient, &ChatClient::disconnected, this, &ClientWindow::disconnectedFromServer);
     connect(m_chatClient, &ChatClient::error, this, &ClientWindow::error);
 
     connect(m_chatClient, &ChatClient::updateUsersList, this, &ClientWindow::updateUsersModel);
-    //connect(m_chatClient, &ChatClient::userJoined, this, &ClientWindow::userJoined);
-    //connect(m_chatClient, &ChatClient::userLeft, this, &ClientWindow::userLeft);
 
     connect(ui->connectionBox, &QCheckBox::toggled, this, &ClientWindow::changeConnection);
 
     connect(ui->sendButton, &QPushButton::clicked, this, &ClientWindow::sendMessage);
-    //connect(ui->messageEdit, &QLineEdit::returnPressed, this, &ChatWindow::sendMessage)
+    connect(ui->messageEdit, &QLineEdit::returnPressed, this, &ClientWindow::sendMessage);
+
+    connect(ui->usersView, &QListView::clicked, this, &ClientWindow::openChat);
 }
 
 ClientWindow::~ClientWindow()
@@ -95,13 +94,25 @@ void ClientWindow::attemptLogin(const QString &userName)
     ui->nameLabel->setText(userName);
 }
 
+void ClientWindow::openChat(const QModelIndex &index)
+{
+    QString chatName = m_usersModel->data(index).toString();
+    ui->recepientLabel->setText(chatName);
+    if (m_chatClient->selectChat(chatName))
+    {
+        ui->messageEdit->setEnabled(true);
+        ui->sendButton->setEnabled(true);
+        ui->chatView->setEnabled(true);
+        return;
+    }
+    QMessageBox::critical(this, tr("Error"), "Can't find user with name " + chatName);
+}
+
 void ClientWindow::loggedIn()
 {
     ui->connectionBox->setCheckState(Qt::Checked);
     ui->connectionBox->setEnabled(true);
-    ui->messageEdit->setEnabled(true);
-    ui->sendButton->setEnabled(true);
-    ui->chatView->setEnabled(true);
+    m_chatModel->insertColumn(0);
     //m_lastUserName.clear();
 }
 
@@ -113,12 +124,44 @@ void ClientWindow::loginFailed(const QString &reason)
 
 void ClientWindow::messageReceived(const QString &sender, const QString &text)
 {
+    int newRow = m_chatModel->rowCount();
 
+    //if (m_lastUserName != sender)
+    //{
+       // m_lastUserName = sender;
+        QFont boldFont;
+        boldFont.setBold(true);
+
+        m_chatModel->insertRows(newRow, 2);
+        QModelIndex index = m_chatModel->index(newRow, 0);
+        m_chatModel->setData(index, sender + QLatin1Char(':'));
+        m_chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        m_chatModel->setData(index, boldFont, Qt::FontRole);
+        ++newRow;
+//    } else {
+//        m_chatModel->insertRow(newRow);
+//    }
+        index = m_chatModel->index(newRow, 0);
+        m_chatModel->setData(index, text);
+        m_chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        ui->chatView->scrollToBottom();
 }
 
 void ClientWindow::sendMessage()
 {
+    QString text = ui->messageEdit->text();
+    if (m_chatClient->sendMessage(text))
+    {
+        const int newRow = m_chatModel->rowCount();
+        m_chatModel->insertRow(newRow);
+        QModelIndex index =  m_chatModel->index(newRow, 0);
+        m_chatModel->setData(index, text);
+        m_chatModel->setData(index, int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
+        ui->messageEdit->clear();
+        ui->chatView->scrollToBottom();
+        //m_lastUserName.clear();
+    }
 }
 
 void ClientWindow::disconnectedFromServer()
@@ -128,6 +171,7 @@ void ClientWindow::disconnectedFromServer()
     ui->connectionBox->setEnabled(true);
     ui->messageEdit->setEnabled(false);
     ui->sendButton->setEnabled(false);
+    m_chatModel->clear();
     ui->chatView->setEnabled(false);
     //m_lastUserName.clear();
 
@@ -137,16 +181,6 @@ void ClientWindow::updateUsersModel(const QStringList &userNames)
 {
     m_usersModel->setStringList(userNames);
 }
-
-//void ClientWindow::userJoined(const QString &username)
-//{
-//    //m_lastUserName.clear();
-//}
-
-//void ClientWindow::userLeft(const QString &username)
-//{
-//    //m_lastUserName.clear();
-//}
 
 void ClientWindow::error(QAbstractSocket::SocketError socketError)
 {

@@ -22,7 +22,7 @@ private:
 
 private slots:
     void broadcast(const QJsonObject &message, ServerWorker *exclude);
-    void broadcast(const QJsonObject &message, ServerWorker *sender, ServerWorker *recipient);
+    void broadcast(const QJsonObject &message, const QString &recipientName);
     void jsonReceived(ServerWorker *sender, const QJsonObject &json);
     void userDisconnected(ServerWorker *sender, int threadIdx);
     void userError(ServerWorker *sender);

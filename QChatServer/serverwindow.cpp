@@ -16,6 +16,7 @@ ServerWindow::ServerWindow(QWidget *parent)
 
     connect(ui->startStopButton, &QPushButton::clicked, this, &ServerWindow::toggleStartServer);
     connect(m_chatServer, &ChatServer::logMessage, this, &ServerWindow::logMessage);
+
 }
 
 ServerWindow::~ServerWindow()

@@ -63,7 +63,7 @@ void ChatServer::sendJson(ServerWorker *destination, const QJsonObject &message)
 {
     Q_ASSERT(destination);
     QTimer::singleShot(0, destination,
-        std::bind(&ServerWorker::sendJson, destination, message));
+                       std::bind(&ServerWorker::sendJson, destination, message));
 }
 
 void ChatServer::broadcast(const QJsonObject &message, ServerWorker *exclude)
@@ -76,10 +76,17 @@ void ChatServer::broadcast(const QJsonObject &message, ServerWorker *exclude)
     }
 }
 
-void ChatServer::broadcast(const QJsonObject &message, ServerWorker *sender, ServerWorker *recipient)
+void ChatServer::broadcast(const QJsonObject &message, const QString &recipientName)
 {
-    Q_ASSERT(recipient);
-    sendJson(recipient, message);
+    for (ServerWorker *worker : m_clients) {
+        if (worker->userName() == recipientName)
+        {
+            Q_ASSERT(worker);
+            sendJson(worker, message);
+            return;
+        }
+    }
+
 }
 
 void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &json)
@@ -189,7 +196,15 @@ void ChatServer::jsonFromLoggedIn(ServerWorker *sender, const QJsonObject &docOb
     message[QStringLiteral("type")] = QStringLiteral("message");
     message[QStringLiteral("text")] = text;
     message[QStringLiteral("sender")] = sender->userName();
-    broadcast(message, sender);
+
+    const QJsonValue recipientVal = docObj.value(QLatin1String("recipient"));
+    if (recipientVal.isNull() || !recipientVal.isString())
+        broadcast(message, sender);
+    else {
+        const QString recipientName = recipientVal.toString().trimmed();
+        broadcast(message, recipientName);
+    }
+
 }
 
 

@@ -12,11 +12,14 @@ public:
     explicit ChatClient(QObject *parent = nullptr);
     ~ChatClient();
     QString userName() const;
+    QString recipientName() const;
     QStringList users() const;
 
 public slots:
     void connectToServer(const QHostAddress &address, qintptr port);
     void login(const QString &userName);
+    bool selectChat(const QString &chatName);
+    bool sendMessage(const QString &text);
     void disconnectFromHost();
 
 private slots:
@@ -28,12 +31,11 @@ signals:
     void disconnected();
     void messageReceived(const QString &sender, const QString &text);
     void error(QAbstractSocket::SocketError socekError);
-    void userJoined(const QString &username);
-    void userLeft(const QString &username);
     void updateUsersList(const QStringList &userNames);
 private:
     QTcpSocket *m_clientSocket;
     QString m_userName;
+    QString m_recipientName;
     QStringList *m_users;
     bool m_loggedIn;
     void jsonReceived(const QJsonObject &doc);
