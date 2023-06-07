@@ -5,17 +5,17 @@
 #include <QStandardItemModel>
 #include <QInputDialog>
 #include <QStringLiteral>
+#include <QMap>
 
 ClientWindow::ClientWindow(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::ClientWindow)
     , m_chatClient(new ChatClient(this))
-    , m_chatModel(new QStandardItemModel(this))
+    , m_chatModels(new QMap<QString, QStandardItemModel *>())
     , m_usersModel(new QStringListModel(this))
 {
     ui->setupUi(this);
 
-    ui->chatView->setModel(m_chatModel);
     ui->usersView->setModel(m_usersModel);
 
     connect(m_chatClient, &ChatClient::connected, this, &ClientWindow::connectedToServer);
@@ -37,12 +37,15 @@ ClientWindow::ClientWindow(QWidget *parent)
 
 ClientWindow::~ClientWindow()
 {
+    for (QStandardItemModel *model : m_chatModels->values())
+        delete model;
+    delete m_chatModels;
     delete ui;
 }
 
 void ClientWindow::changeConnection()
 {
-    if(!ui->connectionBox->isChecked()) //m_loggedIn
+    if(!ui->connectionBox->isChecked())
     {
         m_chatClient->disconnectFromHost();
         return;
@@ -97,9 +100,20 @@ void ClientWindow::attemptLogin(const QString &userName)
 void ClientWindow::openChat(const QModelIndex &index)
 {
     QString chatName = m_usersModel->data(index).toString();
-    ui->recepientLabel->setText(chatName);
-    if (m_chatClient->selectChat(chatName))
+
+    QString userName = m_chatClient->chatSelected(chatName);
+    if (!userName.isEmpty())
     {
+        m_chatClient->unreadMessages(userName, true);
+        ui->recepientLabel->setText(userName);
+        if (!m_chatModels->keys().contains(userName)) {
+            QStandardItemModel *newChatModel = new QStandardItemModel();
+            m_chatModels->insert(userName, newChatModel);
+            newChatModel->insertColumn(0);
+        }
+
+        QStandardItemModel * chatModel = m_chatModels->value(userName);
+        ui->chatView->setModel(chatModel);
         ui->messageEdit->setEnabled(true);
         ui->sendButton->setEnabled(true);
         ui->chatView->setEnabled(true);
@@ -112,8 +126,6 @@ void ClientWindow::loggedIn()
 {
     ui->connectionBox->setCheckState(Qt::Checked);
     ui->connectionBox->setEnabled(true);
-    m_chatModel->insertColumn(0);
-    //m_lastUserName.clear();
 }
 
 void ClientWindow::loginFailed(const QString &reason)
@@ -124,26 +136,31 @@ void ClientWindow::loginFailed(const QString &reason)
 
 void ClientWindow::messageReceived(const QString &sender, const QString &text)
 {
-    int newRow = m_chatModel->rowCount();
+        if (ui->recepientLabel->text() != sender)
+        m_chatClient->unreadMessages(sender, false);
 
-    //if (m_lastUserName != sender)
-    //{
-       // m_lastUserName = sender;
         QFont boldFont;
         boldFont.setBold(true);
 
-        m_chatModel->insertRows(newRow, 2);
-        QModelIndex index = m_chatModel->index(newRow, 0);
-        m_chatModel->setData(index, sender + QLatin1Char(':'));
-        m_chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        m_chatModel->setData(index, boldFont, Qt::FontRole);
+        if (!m_chatModels->keys().contains(sender)) {
+            QStandardItemModel *newChatModel = new QStandardItemModel();
+            m_chatModels->insert(sender, newChatModel);
+            newChatModel->insertColumn(0);
+        }
+
+        QStandardItemModel *chatModel = m_chatModels->value(sender);
+
+        int newRow = chatModel->rowCount();
+        chatModel->insertRows(newRow, 2);
+        QModelIndex index = chatModel->index(newRow, 0);
+        chatModel->setData(index, sender + QLatin1Char(':'));
+        chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        chatModel->setData(index, boldFont, Qt::FontRole);
         ++newRow;
-//    } else {
-//        m_chatModel->insertRow(newRow);
-//    }
-        index = m_chatModel->index(newRow, 0);
-        m_chatModel->setData(index, text);
-        m_chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
+
+        index = chatModel->index(newRow, 0);
+        chatModel->setData(index, text);
+        chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
         ui->chatView->scrollToBottom();
 }
 
@@ -152,15 +169,16 @@ void ClientWindow::sendMessage()
     QString text = ui->messageEdit->text();
     if (m_chatClient->sendMessage(text))
     {
-        const int newRow = m_chatModel->rowCount();
-        m_chatModel->insertRow(newRow);
-        QModelIndex index =  m_chatModel->index(newRow, 0);
-        m_chatModel->setData(index, text);
-        m_chatModel->setData(index, int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        QStandardItemModel *chatModel = m_chatModels->value(ui->recepientLabel->text());
+
+        const int newRow = chatModel->rowCount();
+        chatModel->insertRow(newRow);
+        QModelIndex index =  chatModel->index(newRow, 0);
+        chatModel->setData(index, text);
+        chatModel->setData(index, int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
         ui->messageEdit->clear();
         ui->chatView->scrollToBottom();
-        //m_lastUserName.clear();
     }
 }
 
@@ -171,15 +189,25 @@ void ClientWindow::disconnectedFromServer()
     ui->connectionBox->setEnabled(true);
     ui->messageEdit->setEnabled(false);
     ui->sendButton->setEnabled(false);
-    m_chatModel->clear();
+    ui->recepientLabel->setText("Friend's name");
+    for (QStandardItemModel *model : m_chatModels->values())
+        delete model;
+    m_chatModels->clear();
     ui->chatView->setEnabled(false);
-    //m_lastUserName.clear();
 
 }
 
-void ClientWindow::updateUsersModel(const QStringList &userNames)
+void ClientWindow::updateUsersModel(const QList<std::pair<QString, int>> &userNames)
 {
-    m_usersModel->setStringList(userNames);
+    QStringList list;
+    for (const std::pair<QString, int> &pair : userNames) {
+        QString str = pair.first;
+        if (pair.second != 0)
+            str.append(" (" + QString::number(pair.second) + ") ");
+
+        list.push_back(str);
+    }
+    m_usersModel->setStringList(list);
 }
 
 void ClientWindow::error(QAbstractSocket::SocketError socketError)

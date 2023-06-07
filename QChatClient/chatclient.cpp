@@ -8,6 +8,7 @@
 ChatClient::ChatClient(QObject *parent)
     : QObject{parent}
     , m_clientSocket(new QTcpSocket(this))
+    , m_users(new QList<std::pair<QString, int>>())
     , m_loggedIn(false)
 {
     connect(m_clientSocket, &QTcpSocket::connected, this, &ChatClient::connected);
@@ -19,7 +20,6 @@ ChatClient::ChatClient(QObject *parent)
 
     connect(m_clientSocket, &QTcpSocket::disconnected, this, [this]()->void{m_loggedIn = false;});
 
-    m_users = new QStringList();
 }
 
 ChatClient::~ChatClient()
@@ -58,13 +58,19 @@ void ChatClient::login(const QString &userName)
     }
 }
 
-bool ChatClient::selectChat(const QString &chatName)
+QString ChatClient::chatSelected(const QString &chatName)
 {
-    if (chatName.isEmpty() || !m_users->contains(chatName))
-        return false;
+    QString name = "";
+    for (const std::pair<QString, int> &user : *m_users) {
+        if (chatName == user.first
+            || (user.second != 0 && user.first == chatName.left(chatName.indexOf(QString::number(user.second)) - 2)))
+            name = user.first;
+    }
 
-    m_recipientName = chatName;
-    return true;
+    if (!name.isEmpty())
+        m_recipientName = name;
+
+    return name;
 }
 
 bool ChatClient::sendMessage(const QString &text)
@@ -88,6 +94,19 @@ void ChatClient::disconnectFromHost()
 {
     m_clientSocket->disconnectFromHost();
     m_users->clear();
+    emit updateUsersList(*m_users);
+}
+
+void ChatClient::unreadMessages(const QString &sender, bool isClear)
+{
+    for (std::pair<QString, int> &user : *m_users) {
+        if (user.first == sender)
+        {
+            if (isClear) user.second = 0;
+            else user.second++;
+            break;
+        }
+    }
     emit updateUsersList(*m_users);
 }
 
@@ -120,7 +139,8 @@ void ChatClient::usersInit(const QJsonArray &usersArray)
         QString name = userName.toString();
         if (name == m_userName)
             continue;
-        m_users->push_back(name);
+        std::pair<QString, int> user = std::make_pair(name, 0);
+        m_users->push_back(user);
     }
     emit updateUsersList(*m_users);
 }
@@ -162,7 +182,10 @@ void ChatClient::jsonReceived(const QJsonObject &docObj)
         const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
         if (usernameVal.isNull() || !usernameVal.isString())
             return;
-        m_users->push_back(usernameVal.toString());
+
+        std::pair<QString, int> user = std::make_pair(usernameVal.toString(), 0);
+        m_users->push_back(user);
+
         emit updateUsersList(*m_users);
 
     // userLeft
@@ -170,7 +193,14 @@ void ChatClient::jsonReceived(const QJsonObject &docObj)
         const QJsonValue usernameVal = docObj.value(QLatin1String("username"));
         if (usernameVal.isNull() || !usernameVal.isString())
             return;
-        m_users->removeAll(usernameVal.toString());
+
+        for (const std::pair<QString, int> &pair : *m_users) {
+            if (pair.first == usernameVal.toString()) {
+                m_users->removeAll(pair);
+                break;
+            }
+        }
+
         emit updateUsersList(*m_users);
 
     // message

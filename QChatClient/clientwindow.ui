@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Client</class>
- <widget class="QWidget" name="Client">
+ <class>ClientWindow</class>
+ <widget class="QWidget" name="ClientWindow">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -37,7 +37,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>ClientWindow</string>
+   <string>Client</string>
   </property>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">

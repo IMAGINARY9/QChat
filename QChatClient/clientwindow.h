@@ -23,9 +23,8 @@ public:
 private:
     Ui::ClientWindow *ui;
     ChatClient *m_chatClient;
-    QStandardItemModel *m_chatModel;
+    QMap<QString, QStandardItemModel *> *m_chatModels;
     QStringListModel *m_usersModel;
-    //QString m_lastUserName;
 
 private slots:
     void changeConnection();
@@ -37,9 +36,8 @@ private slots:
     void messageReceived(const QString &sender, const QString &text);
     void sendMessage();
     void disconnectedFromServer();
-    void updateUsersModel(const QStringList &userNames);
-    //void userJoined(const QString &username);
-    //void userLeft(const QString &username);
+    void updateUsersModel(const QList<std::pair<QString, int>> &userNames);
+
     void error(QAbstractSocket::SocketError socketError);
 };
 #endif // CLIENTWINDOW_H
