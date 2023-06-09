@@ -115,6 +115,7 @@ void ClientWindow::openChat(const QModelIndex &index)
         QStandardItemModel * chatModel = m_chatModels->value(userName);
         ui->chatView->setModel(chatModel);
         ui->messageEdit->setEnabled(true);
+        ui->messageEdit->clear();
         ui->sendButton->setEnabled(true);
         ui->chatView->setEnabled(true);
         return;
@@ -151,12 +152,13 @@ void ClientWindow::messageReceived(const QString &sender, const QString &text)
         QStandardItemModel *chatModel = m_chatModels->value(sender);
 
         int newRow = chatModel->rowCount();
-        chatModel->insertRows(newRow, 2);
+        chatModel->insertRows(newRow, 1);
+        //chatModel->insertRows(newRow, 2);
         QModelIndex index = chatModel->index(newRow, 0);
-        chatModel->setData(index, sender + QLatin1Char(':'));
-        chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        chatModel->setData(index, boldFont, Qt::FontRole);
-        ++newRow;
+        //chatModel->setData(index, sender + QLatin1Char(':'));
+        //chatModel->setData(index, int(Qt::AlignLeft | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        //chatModel->setData(index, boldFont, Qt::FontRole);
+        //++newRow;
 
         index = chatModel->index(newRow, 0);
         chatModel->setData(index, text);
@@ -189,7 +191,7 @@ void ClientWindow::disconnectedFromServer()
     ui->connectionBox->setEnabled(true);
     ui->messageEdit->setEnabled(false);
     ui->sendButton->setEnabled(false);
-    ui->recepientLabel->setText("Friend's name");
+    ui->recepientLabel->setText("Friend'sName");
     for (QStandardItemModel *model : m_chatModels->values())
         delete model;
     m_chatModels->clear();
@@ -256,6 +258,8 @@ void ClientWindow::error(QAbstractSocket::SocketError socketError)
         QMessageBox::critical(this, tr("Error"), tr("Proxy comunication failed"));
         break;
     case QAbstractSocket::TemporaryError:
+        QMessageBox::warning(this, tr("Error"), tr("Recipient not found"));
+        return;
     case QAbstractSocket::OperationError:
         QMessageBox::warning(this, tr("Error"), tr("Operation failed, please try again"));
         return;

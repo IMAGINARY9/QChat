@@ -78,6 +78,11 @@ bool ChatClient::sendMessage(const QString &text)
     if (text.isEmpty())
         return false;
 
+    if (!m_users->contains(std::make_pair(m_recipientName, 0)))
+    {
+        emit error(QAbstractSocket::TemporaryError);
+        return false;
+    }
     QDataStream clientStream(m_clientSocket);
 
     QJsonObject message;

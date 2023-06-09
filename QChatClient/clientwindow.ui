@@ -39,6 +39,40 @@
   <property name="windowTitle">
    <string>Client</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget { 
+background: rgb(240, 240, 240);
+color: rgb(34, 34, 34); 
+}
+
+*:disabled {
+background: rgba(200, 200, 200, 150);
+color: rgba(34, 34, 34, 50)
+}
+
+QPushButton {
+border: 2px solid rgb(40, 40, 40);
+border-radius: 5px;
+padding: 3px 20px;
+}
+
+QPushButton:hover {
+background: rgb(170, 170, 170);
+}
+
+QLineEdit {
+border: 2px solid rgb(40, 40, 40);
+border-radius: 5px;
+padding: 2px 10px;
+}
+
+QListView {
+border: 2px solid rgb(40, 40, 40);
+border-radius: 5px;
+padding: 2px 10px;
+}
+</string>
+  </property>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
@@ -67,6 +101,17 @@
      <widget class="QListView" name="chatView">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+       </font>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
       <property name="editTriggers">
        <set>QAbstractItemView::NoEditTriggers</set>
@@ -142,6 +187,9 @@
         <kerning>true</kerning>
        </font>
       </property>
+      <property name="cursor">
+       <cursorShape>PointingHandCursor</cursorShape>
+      </property>
       <property name="text">
        <string>Active</string>
       </property>
@@ -206,6 +254,12 @@
      <widget class="QListView" name="usersView">
       <property name="enabled">
        <bool>true</bool>
+      </property>
+      <property name="font">
+       <font>
+        <bold>true</bold>
+        <kerning>true</kerning>
+       </font>
       </property>
       <property name="editTriggers">
        <set>QAbstractItemView::NoEditTriggers</set>
